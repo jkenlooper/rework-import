@@ -112,8 +112,9 @@ function read(file, opts) {
  * @api private
  */
 
-function run(style, opts) {
+function run(style, opts, depends) {
     opts = getOptions(style.rules, opts || {});
+    depends = depends || [];
 
     var rules = style.rules || [];
     var ret = [];
@@ -133,14 +134,19 @@ function run(style, opts) {
             return;
         }
 
+
         opts.source = exists(data.path, pos, opts);
+        if (opts.source) {
+          var input_file = path.join( path.dirname( opts.source ).substr( process.cwd().length+1 ), path.basename(data.path) );
+          depends.push( input_file );
+        }
 
         if (opts.path.indexOf(path.dirname(opts.source)) === -1) {
             opts.path.unshift(path.dirname(opts.source));
         }
 
         var content = read(opts.source, opts);
-        run(content, opts);
+        run(content, opts, depends);
 
         if (!data.condition || !data.condition.length) {
             ret = ret.concat(content.rules);
@@ -162,7 +168,10 @@ function run(style, opts) {
  */
 
 module.exports = function (opts) {
+    opts = opts || {};
     return function (style) {
-        run(style, opts);
+        var depends = opts.depends;
+        run(style, opts, depends);
+        opts.depends = depends;
     };
 };
